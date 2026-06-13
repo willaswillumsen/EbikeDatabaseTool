@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Bike Engineering Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #151820;
+  --bg3: #1c2030;
+  --bg4: #232840;
+  --border: #2a3050;
+  --text: #e8eaf6;
+  --text2: #8892b0;
+  --accent: #4fc3f7;
+  --accent2: #81c784;
+  --accent3: #ffb74d;
+  --accent4: #f06292;
+  --warn: #ff7043;
+  --good: #66bb6a;
+  --bad: #ef5350;
+  --purple: #ce93d8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;min-height:100vh}
+h1{font-size:22px;font-weight:600;color:var(--accent)}
+h2{font-size:16px;font-weight:600;color:var(--accent);margin-bottom:12px}
+h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px}
+
+/* Header */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,#4fc3f7,#1565c0);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.header-sub{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* Tabs */
+.tabs{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px;overflow-x:auto}
+.tab{padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;color:var(--text2);font-size:13px;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text);background:var(--bg3)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);background:transparent}
+.tab-icon{font-size:15px}
+
+/* Panels */
+.panels{padding:20px 24px;max-width:1400px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+
+/* Search / filter bar */
+.filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.filter-bar input,.filter-bar select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;outline:none}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--accent)}
+.filter-bar input{flex:1;min-width:180px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-blue{background:#1565c040;color:var(--accent)}
+.badge-green{background:#2e7d3240;color:var(--accent2)}
+.badge-amber{background:#e65100, 40%;color:var(--accent3)}
+.badge-orange{background:#bf360c40;color:var(--warn)}
+.badge-purple{background:#6a1b9a40;color:var(--purple)}
+.badge-red{background:#b71c1c40;color:var(--bad)}
+
+/* Tables */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg3);padding:10px 12px;text-align:left;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+tbody tr:hover{background:var(--bg3)}
+tbody tr:last-child{border-bottom:none}
+tbody td{padding:9px 12px;color:var(--text);vertical-align:middle}
+.num{text-align:right;font-family:monospace;color:var(--accent)}
+
+/* Cards grid */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.card-title{font-weight:600;color:var(--text);font-size:14px}
+.card-brand{font-size:11px;color:var(--text2);margin-top:2px}
+.card-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.stat{background:var(--bg3);border-radius:6px;padding:6px 8px}
+.stat-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.stat-val{font-size:14px;font-weight:600;color:var(--accent);margin-top:2px}
+
+/* Build configurator */
+.build-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.build-grid{grid-template-columns:1fr}}
+.build-section{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.build-select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:6px;font-size:13px;margin-top:6px;outline:none}
+.build-select:focus{border-color:var(--accent)}
+.results-panel{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;margin-top:20px}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:14px}
+.result-card{background:var(--bg3);border-radius:8px;padding:12px;text-align:center}
+.result-num{font-size:26px;font-weight:700;color:var(--accent);margin:4px 0}
+.result-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+
+.warning-box{background:#b71c1c20;border:1px solid var(--bad);border-radius:8px;padding:12px;margin-top:12px;color:var(--bad);font-size:13px}
+.ok-box{background:#1b5e2020;border:1px solid var(--good);border-radius:8px;padding:12px;margin-top:12px;color:var(--good);font-size:13px}
+
+/* Comparison */
+.compare-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.compare-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.compare-card.winner{border-color:var(--accent2)}
+.compare-bar-wrap{margin:6px 0}
+.compare-bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px}
+.compare-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.compare-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+
+/* Charts panel */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.chart-card canvas{max-height:260px}
+.chart-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.chart-controls select,.chart-controls input{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;outline:none}
+
+/* Tooltip */
+.tooltip{position:relative;display:inline-block;cursor:help;border-bottom:1px dashed var(--text2)}
+.tooltip:hover .tip{visibility:visible;opacity:1}
+.tip{visibility:hidden;opacity:0;background:var(--bg4);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;width:200px;position:absolute;bottom:120%;left:50%;transform:translateX(-50%);z-index:200;transition:opacity .2s;pointer-events:none;line-height:1.5}
+
+/* Btn */
+.btn{background:var(--accent);color:#000;border:none;padding:9px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:opacity .2s}
+.btn:hover{opacity:.85}
+.btn-outline{background:transparent;color:var(--accent);border:1px solid var(--accent);padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .2s}
+.btn-outline:hover{background:var(--accent);color:#000}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* Range estimator */
+.range-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+@media(max-width:600px){.range-controls{grid-template-columns:1fr}}
+.slider-wrap{background:var(--bg3);border-radius:8px;padding:12px}
+.slider-wrap label{font-size:12px;color:var(--text2);display:flex;justify-content:space-between}
+.slider-wrap input[type=range]{width:100%;margin-top:8px;accent-color:var(--accent)}
+.slider-val{color:var(--accent);font-weight:600}
+
+/* Export */
+.export-area{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:14px;font-family:monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:300px;overflow-y:auto}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#3a4060}
+
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin:1px}
+.pill-mid{background:#1565c040;color:var(--accent)}
+.pill-hub{background:#6a1b9a40;color:var(--purple)}
+.pill-torque{background:#2e7d3240;color:var(--accent2)}
+.pill-cadence{background:#e65100, 40%;color:var(--accent3);background:#7b3f0040}
+.pill-cargo{background:#37474f40;color:#90a4ae}
+.pill-mtb{background:#1b5e2040;color:#a5d6a7}
+.pill-commuter{background:#0d47a140;color:#90caf9}
+.pill-speed{background:#880e4f40;color:#f48fb1}
+
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:gap}
+.count-badge{background:var(--bg4);border:1px solid var(--border);border-radius:20px;padding:3px 12px;font-size:12px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--accent)">E-Bike Engineering Dashboard</div>
+      <div class="header-sub">Professional Motor · Controller · Battery Database & Simulation</div>
+    </div>
+  </div>
+  <div style="margin-left:auto;font-size:12px;color:var(--text2)">v2.0 · Offline Ready</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('motors')"><span class="tab-icon">🔋</span>Motors</div>
+  <div class="tab" onclick="showTab('controllers')"><span class="tab-icon">⚙️</span>Controllers</div>
+  <div class="tab" onclick="showTab('batteries')"><span class="tab-icon">🔌</span>Batteries</div>
+  <div class="tab" onclick="showTab('build')"><span class="tab-icon">🧰</span>Build Configurator</div>
+  <div class="tab" onclick="showTab('compare')"><span class="tab-icon">⚡</span>Comparison Engine</div>
+  <div class="tab" onclick="showTab('graphs')"><span class="tab-icon">📊</span>Graphs</div>
+</div>
+
+<div class="panels">
+
+<!-- MOTORS PANEL -->
+<div id="panel-motors" class="panel active">
+  <div class="section-header">
+    <h2>Motor Database</h2>
+    <span class="count-badge" id="motor-count"></span>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="motor-search" placeholder="Search motors…" oninput="filterMotors()">
+    <select onchange="filterMotors()" id="motor-brand">
+      <option value="">All Brands</option>
+      <option>Bafang</option><option>Bosch</option><option>Shimano</option><option>Yamaha</option>
+      <option>Brose</option><option>Panasonic</option><option>Specialized</option><option>CYC Motors</option>
+      <option>QS Motor</option><option>MXUS</option><option>Crystalyte</option><option>Nine Continent</option>
+      <option>Golden Motor</option>
+    </select>
+    <select onchange="filterMotors()" id="motor-type">
+      <option value="">All Types</option>
+      <option>Mid-Drive</option><option>Hub Motor</option>
+    </select>
+    <select onchange="filterMotors()" id="motor-use">
+      <option value="">All Use Cases</option>
+      <option>MTB</option><option>Commuter</option><option>Cargo</option><option>Speed</option><option>Universal</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table id="motor-table">
+      <thead>
+        <tr>
+          <th>Motor</th><th>Brand</th><th>Type</th>
+          <th>Rated W</th><th>Peak W</th><th>Torque Nm</th>
+          <th>Voltage</th><th>Sensor</th><th>Efficiency</th><th>Use Case</th>
+        </tr>
+      </thead>
+      <tbody id="motor-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CONTROLLERS PANEL -->
+<div id="panel-controllers" class="panel">
+  <div class="section-header">
+    <h2>Controller Database</h2>
+    <span class="count-badge" id="ctrl-count"></span>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="ctrl-search" placeholder="Search controllers…" oninput="filterControllers()">
+    <select onchange="filterControllers()" id="ctrl-brand">
+      <option value="">All Brands</option>
+      <option>KT</option><option>Bafang</option><option>ASI</option><option>Kelly</option>
+      <option>Fardriver</option><option>Sabvoton</option><option>VESC</option>
+    </select>
+    <select onchange="filterControllers()" id="ctrl-proto">
+      <option value="">All Protocols</option>
+      <option>UART</option><option>CAN</option><option>Analog</option><option>USB</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th><th>Brand</th><th>Voltage Range</th><th>Max Current (A)</th>
+          <th>Protocol</th><th>Programmable</th><th>Sine Wave</th><th>Use Case</th>
+        </tr>
+      </thead>
+      <tbody id="ctrl-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BATTERIES PANEL -->
+<div id="panel-batteries" class="panel">
+  <div class="section-header">
+    <h2>Battery Database & Range Calculator</h2>
+  </div>
+  <div class="filter-bar">
+    <input type="text" id="batt-search" placeholder="Search batteries…" oninput="filterBatteries()">
+    <select onchange="filterBatteries()" id="batt-volt">
+      <option value="">All Voltages</option>
+      <option>36V</option><option>48V</option><option>52V</option><option>60V</option><option>72V</option>
+    </select>
+    <select onchange="filterBatteries()" id="batt-cell">
+      <option value="">All Cell Types</option>
+      <option>18650</option><option>21700</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Pack</th><th>Voltage</th><th>Capacity Ah</th><th>Energy Wh</th>
+          <th>Cell Type</th><th>Cont. Discharge (A)</th><th>Peak (A)</th>
+          <th>Range Urban (km)</th><th>Range Off-Road (km)</th>
+        </tr>
+      </thead>
+      <tbody id="batt-tbody"></tbody>
+    </table>
+  </div>
+
+  <div style="margin-top:24px">
+    <h2>Custom Range Estimator</h2>
+    <div class="range-controls">
+      <div class="slider-wrap">
+        <label>Battery Capacity (Wh) <span class="slider-val" id="wh-val">500 Wh</span></label>
+        <input type="range" min="100" max="2000" step="10" value="500" oninput="updateRange()" id="wh-slider">
+      </div>
+      <div class="slider-wrap">
+        <label>Motor Power (W) <span class="slider-val" id="mw-val">500 W</span></label>
+        <input type="range" min="100" max="3000" step="50" value="500" oninput="updateRange()" id="mw-slider">
+      </div>
+      <div class="slider-wrap">
+        <label>Rider Weight (kg) <span class="slider-val" id="rw-val">80 kg</span></label>
+        <input type="range" min="40" max="160" step="1" value="80" oninput="updateRange()" id="rw-slider">
+      </div>
+      <div class="slider-wrap">
+        <label>Average Speed (km/h) <span class="slider-val" id="spd-val">25 km/h</span></label>
+        <input type="range" min="10" max="60" step="1" value="25" oninput="updateRange()" id="spd-slider">
+      </div>
+    </div>
+    <div class="result-grid" id="range-results"></div>
+  </div>
+</div>
+
+<!-- BUILD CONFIGURATOR PANEL -->
+<div id="panel-build" class="panel">
+  <h2>Build Configurator</h2>
+  <p style="color:var(--text2);margin-bottom:16px;font-size:13px">Select your components — the system checks compatibility and calculates performance.</p>
+
+  <div class="build-grid">
+    <div class="build-section">
+      <h3>🔋 Motor</h3>
+      <select class="build-select" id="build-motor" onchange="runBuild()">
+        <option value="">— Select Motor —</option>
+      </select>
+    </div>
+    <div class="build-section">
+      <h3>⚙️ Controller</h3>
+      <select class="build-select" id="build-ctrl" onchange="runBuild()">
+        <option value="">— Select Controller —</option>
+      </select>
+    </div>
+    <div class="build-section">
+      <h3>🔌 Battery</h3>
+      <select class="build-select" id="build-batt" onchange="runBuild()">
+        <option value="">— Select Battery —</option>
+      </select>
+    </div>
+    <div class="build-section">
+      <h3>🚲 Bike Type</h3>
+      <select class="build-select" id="build-bike" onchange="runBuild()">
+        <option value="commuter">Commuter / Urban</option>
+        <option value="mtb">Mountain Bike (MTB)</option>
+        <option value="cargo">Cargo Bike</option>
+        <option value="speed">Speed / Race</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="results-panel" id="build-results">
+    <h3>Build Results</h3>
+    <p style="color:var(--text2);font-size:13px;margin-top:8px">Select all components above to see compatibility analysis and performance estimates.</p>
+  </div>
+
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn" onclick="exportBuild()">Export Build Summary</button>
+    <button class="btn-outline" onclick="resetBuild()">Reset</button>
+  </div>
+  <div class="export-area" id="build-export" style="display:none"></div>
+</div>
+
+<!-- COMPARISON PANEL -->
+<div id="panel-compare" class="panel">
+  <h2>Comparison Engine</h2>
+
+  <div style="margin-bottom:20px">
+    <h3>Mid-Drive vs Hub Motor — Efficiency & Performance</h3>
+    <div class="compare-grid" id="drive-compare"></div>
+  </div>
+
+  <div style="margin-top:28px;margin-bottom:20px">
+    <h3>Geared Hub vs Direct Drive Hub</h3>
+    <div class="compare-grid" id="hub-compare"></div>
+  </div>
+
+  <div style="margin-top:28px">
+    <h3>Top Torque vs High Efficiency Setups</h3>
+    <div class="compare-grid" id="torque-compare"></div>
+  </div>
+</div>
+
+<!-- GRAPHS PANEL -->
+<div id="panel-graphs" class="panel">
+  <h2>Interactive Performance Graphs</h2>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Battery Capacity vs Range</h3>
+      <div class="chart-controls">
+        <select id="range-terrain" onchange="updateAllCharts()">
+          <option value="urban">Urban</option>
+          <option value="offroad">Off-Road</option>
+          <option value="mixed">Mixed</option>
+        </select>
+        <select id="range-power" onchange="updateAllCharts()">
+          <option value="250">250W Motor</option>
+          <option value="500">500W Motor</option>
+          <option value="750" selected>750W Motor</option>
+          <option value="1000">1000W Motor</option>
+        </select>
+      </div>
+      <canvas id="chart-range"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Motor Power vs Torque Curves</h3>
+      <div class="chart-controls">
+        <select id="torque-motor" onchange="updateAllCharts()">
+          <option value="bbshd">Bafang BBSHD</option>
+          <option value="cx">Bosch CX Gen5</option>
+          <option value="ep8">Shimano EP8</option>
+          <option value="qs205">QS Motor 205</option>
+        </select>
+      </div>
+      <canvas id="chart-torque"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Efficiency Comparison</h3>
+      <canvas id="chart-efficiency"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <h3>Voltage vs Top Speed</h3>
+      <div class="chart-controls">
+        <select id="speed-motor" onchange="updateAllCharts()">
+          <option value="48">48V Base</option>
+          <option value="52">52V Base</option>
+          <option value="60">60V Base</option>
+          <option value="72">72V Base</option>
+        </select>
+      </div>
+      <canvas id="chart-speed"></canvas>
+    </div>
+
+    <div class="chart-card" style="grid-column:span 2">
+      <h3>Range Estimator — Wh vs Conditions</h3>
+      <div class="chart-controls">
+        <label style="color:var(--text2);font-size:12px">Weight (kg): <input type="range" min="60" max="150" value="80" id="graph-weight" oninput="updateAllCharts();document.getElementById('gwlbl').textContent=this.value+'kg'" style="width:100px;accent-color:var(--accent)"> <span id="gwlbl">80kg</span></label>
+      </div>
+      <canvas id="chart-range2" style="max-height:220px"></canvas>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ==================== DATA ====================
+
+const MOTORS = [
+  // Bafang BBS Series
+  {name:'BBS01B',brand:'Bafang',series:'BBS',type:'Mid-Drive',rated:250,peak:350,torque:80,voltage:36,sensor:'Cadence',efficiency:85,use:'Commuter'},
+  {name:'BBS02B',brand:'Bafang',series:'BBS',type:'Mid-Drive',rated:500,peak:750,torque:120,voltage:48,sensor:'Cadence',efficiency:86,use:'Commuter'},
+  {name:'BBSHD',brand:'Bafang',series:'BBS',type:'Mid-Drive',rated:1000,peak:1500,torque:160,voltage:48,sensor:'Cadence+Torque',efficiency:87,use:'MTB'},
+  // Bafang M Series
+  {name:'M200',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:400,torque:60,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'M300',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:450,torque:65,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'M400',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:500,torque:80,voltage:48,sensor:'Torque',efficiency:89,use:'Commuter'},
+  {name:'M500',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:600,torque:95,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'M600',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:700,torque:120,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'M620 (G510)',brand:'Bafang',series:'Ultra',type:'Mid-Drive',rated:1000,peak:1500,torque:160,voltage:48,sensor:'Torque',efficiency:91,use:'MTB'},
+  {name:'M820',brand:'Bafang',series:'M Series',type:'Mid-Drive',rated:250,peak:600,torque:90,voltage:36,sensor:'Torque',efficiency:89,use:'MTB'},
+  // Bafang Hub
+  {name:'SWXH 250W Front',brand:'Bafang',series:'H Series',type:'Hub Motor',rated:250,peak:350,torque:45,voltage:36,sensor:'Cadence',efficiency:82,use:'Commuter'},
+  {name:'SWXK 500W Rear',brand:'Bafang',series:'H Series',type:'Hub Motor',rated:500,peak:700,torque:60,voltage:48,sensor:'Cadence',efficiency:83,use:'Commuter'},
+  {name:'RMG063 Geared',brand:'Bafang',series:'H Series',type:'Hub Motor',rated:750,peak:1000,torque:75,voltage:48,sensor:'Cadence',efficiency:84,use:'Universal'},
+  // Bosch
+  {name:'Active Line',brand:'Bosch',series:'Active',type:'Mid-Drive',rated:250,peak:300,torque:40,voltage:36,sensor:'Torque',efficiency:85,use:'Commuter'},
+  {name:'Active Line Plus',brand:'Bosch',series:'Active',type:'Mid-Drive',rated:250,peak:350,torque:50,voltage:36,sensor:'Torque',efficiency:86,use:'Commuter'},
+  {name:'Performance Line',brand:'Bosch',series:'Performance',type:'Mid-Drive',rated:250,peak:400,torque:65,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'Performance CX Gen3',brand:'Bosch',series:'Performance CX',type:'Mid-Drive',rated:250,peak:600,torque:75,voltage:36,sensor:'Torque',efficiency:89,use:'MTB'},
+  {name:'Performance CX Gen4',brand:'Bosch',series:'Performance CX',type:'Mid-Drive',rated:250,peak:625,torque:85,voltage:36,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'Performance CX Gen5',brand:'Bosch',series:'Performance CX',type:'Mid-Drive',rated:250,peak:650,torque:85,voltage:36,sensor:'Torque',efficiency:91,use:'MTB'},
+  {name:'Cargo Line',brand:'Bosch',series:'Cargo',type:'Mid-Drive',rated:250,peak:500,torque:85,voltage:48,sensor:'Torque',efficiency:90,use:'Cargo'},
+  // Shimano
+  {name:'STEPS E5000',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:400,torque:60,voltage:36,sensor:'Torque',efficiency:87,use:'Commuter'},
+  {name:'STEPS E6100',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:450,torque:60,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'STEPS E7000',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:500,torque:70,voltage:36,sensor:'Torque',efficiency:88,use:'MTB'},
+  {name:'STEPS EP6',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:550,torque:70,voltage:36,sensor:'Torque',efficiency:89,use:'MTB'},
+  {name:'STEPS EP8',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:600,torque:85,voltage:36,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'STEPS EP801',brand:'Shimano',series:'STEPS',type:'Mid-Drive',rated:250,peak:600,torque:85,voltage:36,sensor:'Torque',efficiency:90,use:'MTB'},
+  // Yamaha
+  {name:'PW-SE',brand:'Yamaha',series:'PW',type:'Mid-Drive',rated:250,peak:450,torque:70,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'PW-ST',brand:'Yamaha',series:'PW',type:'Mid-Drive',rated:250,peak:450,torque:70,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'PW-X',brand:'Yamaha',series:'PW',type:'Mid-Drive',rated:250,peak:500,torque:80,voltage:36,sensor:'Torque',efficiency:89,use:'MTB'},
+  {name:'PW-X2',brand:'Yamaha',series:'PW',type:'Mid-Drive',rated:250,peak:550,torque:80,voltage:36,sensor:'Torque',efficiency:89,use:'MTB'},
+  {name:'PW-X3',brand:'Yamaha',series:'PW',type:'Mid-Drive',rated:250,peak:600,torque:85,voltage:36,sensor:'Torque',efficiency:90,use:'MTB'},
+  // Brose
+  {name:'Drive S Mag',brand:'Brose',series:'Drive',type:'Mid-Drive',rated:250,peak:600,torque:90,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'Drive T',brand:'Brose',series:'Drive',type:'Mid-Drive',rated:250,peak:560,torque:90,voltage:48,sensor:'Torque',efficiency:90,use:'Commuter'},
+  {name:'Drive C',brand:'Brose',series:'Drive',type:'Mid-Drive',rated:250,peak:500,torque:70,voltage:36,sensor:'Torque',efficiency:89,use:'Commuter'},
+  // Panasonic
+  {name:'GX Ultimate',brand:'Panasonic',series:'GX',type:'Mid-Drive',rated:250,peak:500,torque:70,voltage:36,sensor:'Torque',efficiency:88,use:'Commuter'},
+  {name:'GX Pro',brand:'Panasonic',series:'GX',type:'Mid-Drive',rated:250,peak:450,torque:65,voltage:36,sensor:'Torque',efficiency:87,use:'Commuter'},
+  // Specialized
+  {name:'Levo 1.1',brand:'Specialized',series:'Levo',type:'Mid-Drive',rated:250,peak:565,torque:90,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'Levo 1.2',brand:'Specialized',series:'Levo',type:'Mid-Drive',rated:250,peak:565,torque:90,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'Levo 1.3',brand:'Specialized',series:'Levo',type:'Mid-Drive',rated:250,peak:565,torque:90,voltage:48,sensor:'Torque',efficiency:90,use:'MTB'},
+  {name:'Levo 2.0',brand:'Specialized',series:'Levo',type:'Mid-Drive',rated:250,peak:600,torque:90,voltage:48,sensor:'Torque',efficiency:91,use:'MTB'},
+  {name:'Levo 2.2',brand:'Specialized',series:'Levo',type:'Mid-Drive',rated:250,peak:600,torque:90,voltage:48,sensor:'Torque',efficiency:91,use:'MTB'},
+  // CYC Motors
+  {name:'X1 Stealth',brand:'CYC Motors',series:'X1',type:'Mid-Drive',rated:3000,peak:5000,torque:160,voltage:72,sensor:'Torque',efficiency:88,use:'Speed'},
+  {name:'Photon Gen2',brand:'CYC Motors',series:'Photon',type:'Mid-Drive',rated:500,peak:1500,torque:120,voltage:52,sensor:'Torque',efficiency:87,use:'MTB'},
+  {name:'X1 Pro Gen4',brand:'CYC Motors',series:'X1 Pro',type:'Mid-Drive',rated:5000,peak:8000,torque:200,voltage:72,sensor:'Torque',efficiency:89,use:'Speed'},
+  // QS Motor Hub
+  {name:'QS 205 2000W',brand:'QS Motor',series:'205',type:'Hub Motor',rated:2000,peak:4000,torque:100,voltage:60,sensor:'Cadence',efficiency:85,use:'Speed'},
+  {name:'QS 205 3000W',brand:'QS Motor',series:'205',type:'Hub Motor',rated:3000,peak:6000,torque:130,voltage:72,sensor:'Cadence',efficiency:86,use:'Speed'},
+  {name:'QS 273 5000W',brand:'QS Motor',series:'273',type:'Hub Motor',rated:5000,peak:10000,torque:200,voltage:72,sensor:'Cadence',efficiency:87,use:'Speed'},
+  {name:'QS 273 8000W',brand:'QS Motor',series:'273',type:'Hub Motor',rated:8000,peak:14000,torque:250,voltage:96,sensor:'Cadence',efficiency:88,use:'Speed'},
+  // MXUS
+  {name:'MXUS 3K Turbo',brand:'MXUS',series:'3K',type:'Hub Motor',rated:3000,peak:6000,torque:140,voltage:72,sensor:'Cadence',efficiency:86,use:'Speed'},
+  {name:'MXUS XF40 1500W',brand:'MXUS',series:'XF',type:'Hub Motor',rated:1500,peak:3000,torque:90,voltage:60,sensor:'Cadence',efficiency:84,use:'Commuter'},
+  {name:'MXUS XF15 500W',brand:'MXUS',series:'XF',type:'Hub Motor',rated:500,peak:1000,torque:55,voltage:48,sensor:'Cadence',efficiency:83,use:'Commuter'},
+  // Crystalyte
+  {name:'H3540 1000W',brand:'Crystalyte',series:'H Series',type:'Hub Motor',rated:1000,peak:2000,torque:75,voltage:48,sensor:'Cadence',efficiency:83,use:'Commuter'},
+  {name:'H4080 2000W',brand:'Crystalyte',series:'H Series',type:'Hub Motor',rated:2000,peak:3500,torque:110,voltage:60,sensor:'Cadence',efficiency:84,use:'Speed'},
+  // Nine Continent
+  {name:'2807 500W',brand:'Nine Continent',series:'2807',type:'Hub Motor',rated:500,peak:800,torque:50,voltage:48,sensor:'Cadence',efficiency:82,use:'Commuter'},
+  {name:'3007 1000W',brand:'Nine Continent',series:'3007',type:'Hub Motor',rated:1000,peak:1800,torque:75,voltage:60,sensor:'Cadence',efficiency:83,use:'Universal'},
+  // Golden Motor
+  {name:'Magic Pie 5 250W',brand:'Golden Motor',series:'Magic Pie',type:'Hub Motor',rated:250,peak:500,torque:40,voltage:36,sensor:'Cadence',efficiency:81,use:'Commuter'},
+  {name:'Magic Pie 5 1000W',brand:'Golden Motor',series:'Magic Pie',type:'Hub Motor',rated:1000,peak:2000,torque:80,voltage:48,sensor:'Cadence',efficiency:83,use:'Universal'},
+  {name:'HPM5000B',brand:'Golden Motor',series:'HPM',type:'Hub Motor',rated:5000,peak:8000,torque:180,voltage:72,sensor:'Cadence',efficiency:87,use:'Speed'},
+];
+
+const CONTROLLERS = [
+  // KT
+  {name:'KT 36V 15A Sine',brand:'KT',voltage:'24-36V',current:15,protocol:'UART',prog:'Medium',sine:true,use:'Commuter entry level'},
+  {name:'KT 48V 22A Sine',brand:'KT',voltage:'48V',current:22,protocol:'UART',prog:'Medium',sine:true,use:'Commuter mid range'},
+  {name:'KT 48V 30A Sine',brand:'KT',voltage:'48V',current:30,protocol:'UART',prog:'Medium',sine:true,use:'Commuter high power'},
+  {name:'KT 52V 40A Sine',brand:'KT',voltage:'52V',current:40,protocol:'UART',prog:'Medium',sine:true,use:'Performance commuter'},
+  // Bafang OEM
+  {name:'Bafang UART 36V',brand:'Bafang',voltage:'36V',current:15,protocol:'UART',prog:'Low',sine:true,use:'OEM BBS01/M series'},
+  {name:'Bafang UART 48V',brand:'Bafang',voltage:'48V',current:25,protocol:'UART',prog:'Low',sine:true,use:'OEM BBS02/BBSHD'},
+  {name:'Bafang CAN M620',brand:'Bafang',voltage:'48V',current:30,protocol:'CAN',prog:'Medium',sine:true,use:'OEM M600/M620'},
+  {name:'Bafang Display CAN',brand:'Bafang',voltage:'36-48V',current:20,protocol:'CAN',prog:'Low',sine:true,use:'OEM M series'},
+  // ASI BAC
+  {name:'ASI BAC855',brand:'ASI',voltage:'24-72V',current:55,protocol:'CAN/USB',prog:'High',sine:true,use:'High performance builds'},
+  {name:'ASI BAC2000',brand:'ASI',voltage:'24-96V',current:100,protocol:'CAN/USB',prog:'High',sine:true,use:'Performance / conversion'},
+  {name:'ASI BAC8000',brand:'ASI',voltage:'24-120V',current:300,protocol:'CAN/USB',prog:'High',sine:true,use:'High voltage race builds'},
+  // Kelly
+  {name:'Kelly KLS4812S',brand:'Kelly',voltage:'24-48V',current:120,protocol:'Analog/UART',prog:'High',sine:false,use:'Hub motor conversions'},
+  {name:'Kelly KLS7230S',brand:'Kelly',voltage:'24-72V',current:300,protocol:'Analog/UART',prog:'High',sine:false,use:'High power hub builds'},
+  {name:'Kelly KLS96401',brand:'Kelly',voltage:'48-96V',current:400,protocol:'Analog/UART',prog:'High',sine:false,use:'Heavy duty / cargo'},
+  {name:'Kelly KSL48201',brand:'Kelly',voltage:'24-48V',current:200,protocol:'CAN',prog:'High',sine:true,use:'Mid-high performance'},
+  // Fardriver
+  {name:'Fardriver ND48V1500',brand:'Fardriver',voltage:'48V',current:80,protocol:'CAN/Bluetooth',prog:'High',sine:true,use:'Performance mid drive'},
+  {name:'Fardriver ND72V3500',brand:'Fardriver',voltage:'72V',current:150,protocol:'CAN/Bluetooth',prog:'High',sine:true,use:'High power builds'},
+  {name:'Fardriver ND96V5000',brand:'Fardriver',voltage:'96V',current:250,protocol:'CAN/Bluetooth',prog:'High',sine:true,use:'Race / high voltage'},
+  // Sabvoton
+  {name:'Sabvoton SVMC4840',brand:'Sabvoton',voltage:'48V',current:40,protocol:'Bluetooth/USB',prog:'High',sine:true,use:'Mid power hub motors'},
+  {name:'Sabvoton SVMC7245',brand:'Sabvoton',voltage:'72V',current:45,protocol:'Bluetooth/USB',prog:'High',sine:true,use:'Performance hub builds'},
+  {name:'Sabvoton SVMC72100',brand:'Sabvoton',voltage:'72V',current:100,protocol:'Bluetooth/USB',prog:'High',sine:true,use:'High power conversion'},
+  {name:'Sabvoton SVMC96100',brand:'Sabvoton',voltage:'96V',current:100,protocol:'Bluetooth/USB',prog:'High',sine:true,use:'High voltage race builds'},
+  // VESC
+  {name:'VESC 4.12',brand:'VESC',voltage:'8-60V',current:50,protocol:'USB/UART/CAN',prog:'Expert',sine:true,use:'DIY / research builds'},
+  {name:'VESC 6 MkVI',brand:'VESC',voltage:'8-60V',current:100,protocol:'USB/UART/CAN',prog:'Expert',sine:true,use:'High performance DIY'},
+  {name:'VESC 75/300',brand:'VESC',voltage:'10-75V',current:300,protocol:'USB/UART/CAN',prog:'Expert',sine:true,use:'High current race builds'},
+  {name:'Flipsky FSESC 4.20',brand:'VESC',voltage:'8-60V',current:50,protocol:'USB/UART/CAN',prog:'Expert',sine:true,use:'Budget DIY builds'},
+  {name:'Flipsky FSESC 75200',brand:'VESC',voltage:'8-84V',current:200,protocol:'USB/UART/CAN',prog:'Expert',sine:true,use:'High power DIY'},
+];
+
+const BATTERIES = [
+  // 36V
+  {name:'36V 10Ah Standard',voltage:36,ah:10,wh:360,cell:'18650',contA:15,peakA:30},
+  {name:'36V 13Ah City',voltage:36,ah:13,wh:468,cell:'18650',contA:15,peakA:30},
+  {name:'36V 17Ah Extended',voltage:36,ah:17,wh:612,cell:'18650',contA:20,peakA:40},
+  {name:'36V 20Ah Long Range',voltage:36,ah:20,wh:720,cell:'21700',contA:25,peakA:50},
+  // 48V
+  {name:'48V 10Ah Standard',voltage:48,ah:10,wh:480,cell:'18650',contA:20,peakA:40},
+  {name:'48V 13Ah City',voltage:48,ah:13,wh:624,cell:'18650',contA:20,peakA:40},
+  {name:'48V 17Ah Performance',voltage:48,ah:17,wh:816,cell:'21700',contA:25,peakA:50},
+  {name:'48V 20Ah Extended',voltage:48,ah:20,wh:960,cell:'21700',contA:25,peakA:50},
+  {name:'48V 25Ah XL',voltage:48,ah:25,wh:1200,cell:'21700',contA:30,peakA:60},
+  // 52V
+  {name:'52V 10Ah Performance',voltage:52,ah:10,wh:520,cell:'21700',contA:25,peakA:50},
+  {name:'52V 13Ah Speed',voltage:52,ah:13,wh:676,cell:'21700',contA:25,peakA:50},
+  {name:'52V 17Ah High Energy',voltage:52,ah:17,wh:884,cell:'21700',contA:30,peakA:60},
+  {name:'52V 20Ah XL',voltage:52,ah:20,wh:1040,cell:'21700',contA:30,peakA:60},
+  {name:'52V 25Ah Ultra',voltage:52,ah:25,wh:1300,cell:'21700',contA:35,peakA:70},
+  // 60V
+  {name:'60V 20Ah High Power',voltage:60,ah:20,wh:1200,cell:'21700',contA:40,peakA:80},
+  {name:'60V 30Ah Long Range',voltage:60,ah:30,wh:1800,cell:'21700',contA:50,peakA:100},
+  {name:'60V 40Ah Cargo XL',voltage:60,ah:40,wh:2400,cell:'21700',contA:60,peakA:120},
+  // 72V
+  {name:'72V 20Ah Race',voltage:72,ah:20,wh:1440,cell:'21700',contA:50,peakA:100},
+  {name:'72V 30Ah Performance',voltage:72,ah:30,wh:2160,cell:'21700',contA:60,peakA:120},
+  {name:'72V 40Ah Monster',voltage:72,ah:40,wh:2880,cell:'21700',contA:80,peakA:160},
+  {name:'72V 50Ah Ultra',voltage:72,ah:50,wh:3600,cell:'21700',contA:100,peakA:200},
+];
+
+// ==================== RENDER MOTORS ====================
+let filteredMotors = [...MOTORS];
+
+function renderMotors(data){
+  const tbody = document.getElementById('motor-tbody');
+  document.getElementById('motor-count').textContent = data.length + ' motors';
+  tbody.innerHTML = data.map(m=>`
+    <tr>
+      <td><strong>${m.name}</strong><br><span style="font-size:11px;color:var(--text2)">${m.series}</span></td>
+      <td>${m.brand}</td>
+      <td><span class="pill ${m.type==='Mid-Drive'?'pill-mid':'pill-hub'}">${m.type}</span></td>
+      <td class="num">${m.rated}</td>
+      <td class="num">${m.peak}</td>
+      <td class="num">${m.torque}</td>
+      <td class="num">${m.voltage}V</td>
+      <td><span class="pill ${m.sensor.includes('Torque')?'pill-torque':'pill-cadence'}">${m.sensor}</span></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:50px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+            <div style="width:${m.efficiency}%;height:100%;background:${m.efficiency>=90?'var(--good)':m.efficiency>=85?'var(--accent3)':'var(--accent)'}"></div>
+          </div>
+          <span style="font-size:12px">${m.efficiency}%</span>
+        </div>
+      </td>
+      <td><span class="pill pill-${m.use.toLowerCase().replace(/\s/g,'-')}">${m.use}</span></td>
+    </tr>`).join('');
+}
+
+function filterMotors(){
+  const q = document.getElementById('motor-search').value.toLowerCase();
+  const brand = document.getElementById('motor-brand').value;
+  const type = document.getElementById('motor-type').value;
+  const use = document.getElementById('motor-use').value;
+  filteredMotors = MOTORS.filter(m=>
+    (!q || m.name.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q) || m.series.toLowerCase().includes(q)) &&
+    (!brand || m.brand===brand) &&
+    (!type || m.type===type) &&
+    (!use || m.use===use)
+  );
+  renderMotors(filteredMotors);
+}
+
+// ==================== RENDER CONTROLLERS ====================
+function renderControllers(data){
+  document.getElementById('ctrl-count').textContent = data.length + ' controllers';
+  document.getElementById('ctrl-tbody').innerHTML = data.map(c=>`
+    <tr>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.brand}</td>
+      <td class="num">${c.voltage}</td>
+      <td class="num">${c.current}</td>
+      <td><span class="badge badge-blue">${c.protocol}</span></td>
+      <td>
+        <span class="badge ${c.prog==='Expert'?'badge-purple':c.prog==='High'?'badge-green':c.prog==='Medium'?'badge-amber':'badge-blue'}">${c.prog}</span>
+      </td>
+      <td>${c.sine?'<span style="color:var(--good)">✓ Yes</span>':'<span style="color:var(--text2)">No</span>'}</td>
+      <td style="color:var(--text2);font-size:12px">${c.use}</td>
+    </tr>`).join('');
+}
+
+function filterControllers(){
+  const q = document.getElementById('ctrl-search').value.toLowerCase();
+  const brand = document.getElementById('ctrl-brand').value;
+  const proto = document.getElementById('ctrl-proto').value;
+  const data = CONTROLLERS.filter(c=>
+    (!q || c.name.toLowerCase().includes(q) || c.brand.toLowerCase().includes(q)) &&
+    (!brand || c.brand===brand) &&
+    (!proto || c.protocol.includes(proto))
+  );
+  document.getElementById('ctrl-count').textContent = data.length + ' controllers';
+  document.getElementById('ctrl-tbody').innerHTML = data.map(c=>`
+    <tr>
+      <td><strong>${c.name}</strong></td>
+      <td>${c.brand}</td>
+      <td class="num">${c.voltage}</td>
+      <td class="num">${c.current}</td>
+      <td><span class="badge badge-blue">${c.protocol}</span></td>
+      <td><span class="badge ${c.prog==='Expert'?'badge-purple':c.prog==='High'?'badge-green':c.prog==='Medium'?'badge-amber':'badge-blue'}">${c.prog}</span></td>
+      <td>${c.sine?'<span style="color:var(--good)">✓ Yes</span>':'<span style="color:var(--text2)">No</span>'}</td>
+      <td style="color:var(--text2);font-size:12px">${c.use}</td>
+    </tr>`).join('');
+}
+
+// ==================== RENDER BATTERIES ====================
+function calcRange(wh, terrain, weight=80){
+  const base = wh / (weight*0.04 + 5);
+  const factor = terrain==='urban'?1.0:terrain==='offroad'?0.65:0.80;
+  return Math.round(base * factor);
+}
+
+function renderBatteries(data){
+  document.getElementById('batt-tbody').innerHTML = data.map(b=>`
+    <tr>
+      <td><strong>${b.name}</strong></td>
+      <td class="num">${b.voltage}V</td>
+      <td class="num">${b.ah}</td>
+      <td class="num" style="color:var(--accent2)">${b.wh}</td>
+      <td><span class="badge badge-blue">${b.cell}</span></td>
+      <td class="num">${b.contA}</td>
+      <td class="num">${b.peakA}</td>
+      <td class="num" style="color:var(--accent)">${calcRange(b.wh,'urban')}</td>
+      <td class="num" style="color:var(--accent3)">${calcRange(b.wh,'offroad')}</td>
+    </tr>`).join('');
+}
+
+function filterBatteries(){
+  const q = document.getElementById('batt-search').value.toLowerCase();
+  const volt = document.getElementById('batt-volt').value;
+  const cell = document.getElementById('batt-cell').value;
+  const data = BATTERIES.filter(b=>
+    (!q || b.name.toLowerCase().includes(q)) &&
+    (!volt || b.voltage+'V'===volt) &&
+    (!cell || b.cell===cell)
+  );
+  renderBatteries(data);
+}
+
+// ==================== RANGE CALCULATOR ====================
+function updateRange(){
+  const wh = +document.getElementById('wh-slider').value;
+  const mw = +document.getElementById('mw-slider').value;
+  const rw = +document.getElementById('rw-slider').value;
+  const spd = +document.getElementById('spd-slider').value;
+  document.getElementById('wh-val').textContent = wh + ' Wh';
+  document.getElementById('mw-val').textContent = mw + ' W';
+  document.getElementById('rw-val').textContent = rw + ' kg';
+  document.getElementById('spd-val').textContent = spd + ' km/h';
+
+  const rollingResist = 0.006;
+  const gravity = 9.81;
+  const dragCoeff = 0.4;
+  const frontalArea = 0.5;
+  const airDensity = 1.225;
+  const effFactor = mw > 1000 ? 0.82 : mw > 500 ? 0.85 : 0.88;
+
+  const spdMs = spd / 3.6;
+  const rollingW = rollingResist * (rw + 20) * gravity * spdMs;
+  const aeroDragW = 0.5 * airDensity * dragCoeff * frontalArea * spdMs ** 3;
+  const totalW = rollingW + aeroDragW + 30;
+  const whPerKm = (totalW / spd) / effFactor;
+  const rangeUrban = Math.round(wh / whPerKm * 0.95);
+  const rangeMix = Math.round(wh / whPerKm * 0.80);
+  const rangeOffroad = Math.round(wh / whPerKm * 0.60);
+  const timeHours = Math.round(wh / totalW * 10) / 10;
+
+  document.getElementById('range-results').innerHTML = `
+    <div class="result-card">
+      <div class="result-label">Urban Range</div>
+      <div class="result-num" style="color:var(--accent)">${rangeUrban} km</div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Mixed Range</div>
+      <div class="result-num" style="color:var(--accent2)">${rangeMix} km</div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Off-Road Range</div>
+      <div class="result-num" style="color:var(--accent3)">${rangeOffroad} km</div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Wh/km</div>
+      <div class="result-num" style="color:var(--purple)">${Math.round(whPerKm*10)/10}</div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Est. Ride Time</div>
+      <div class="result-num" style="color:var(--text)">${timeHours} h</div>
+    </div>
+    <div class="result-card">
+      <div class="result-label">Motor Draw</div>
+      <div class="result-num" style="color:var(--warn)">${Math.round(totalW)} W</div>
+    </div>`;
+}
+
+// ==================== BUILD CONFIGURATOR ====================
+function populateBuildSelects(){
+  const ms = document.getElementById('build-motor');
+  const cs = document.getElementById('build-ctrl');
+  const bs = document.getElementById('build-batt');
+  MOTORS.forEach((m,i)=>ms.add(new Option(`${m.brand} ${m.name} (${m.rated}W, ${m.voltage}V)`,i)));
+  CONTROLLERS.forEach((c,i)=>cs.add(new Option(`${c.brand} ${c.name} (${c.voltage}, ${c.current}A)`,i)));
+  BATTERIES.forEach((b,i)=>bs.add(new Option(`${b.name} (${b.wh}Wh)`,i)));
+}
+
+function runBuild(){
+  const mi = document.getElementById('build-motor').value;
+  const ci = document.getElementById('build-ctrl').value;
+  const bi = document.getElementById('build-batt').value;
+  const bike = document.getElementById('build-bike').value;
+  if(mi===''||ci===''||bi===''){return;}
+
+  const m = MOTORS[+mi];
+  const c = CONTROLLERS[+ci];
+  const b = BATTERIES[+bi];
+
+  const warnings = [];
+  const oks = [];
+
+  // Voltage check
+  const cVoltMin = parseInt(c.voltage.split('-')[0] || c.voltage);
+  const cVoltMax = parseInt(c.voltage.split('-').pop());
+  if(m.voltage < cVoltMin || m.voltage > cVoltMax){
+    warnings.push(`⚠️ Motor voltage (${m.voltage}V) is outside controller voltage range (${c.voltage})`);
+  } else {
+    oks.push(`✓ Voltage compatible: motor ${m.voltage}V within controller range (${c.voltage})`);
+  }
+  if(b.voltage !== m.voltage){
+    warnings.push(`⚠️ Battery voltage (${b.voltage}V) doesn't match motor voltage (${m.voltage}V)`);
+  } else {
+    oks.push(`✓ Battery and motor voltages match (${b.voltage}V)`);
+  }
+
+  const peakCurrent = m.peak / b.voltage;
+  if(peakCurrent > c.current){
+    warnings.push(`⚠️ Motor peak current draw (${Math.round(peakCurrent)}A) exceeds controller limit (${c.current}A)`);
+  } else {
+    oks.push(`✓ Peak current OK: motor draws ~${Math.round(peakCurrent)}A, controller rated ${c.current}A`);
+  }
+  if(peakCurrent > b.peakA){
+    warnings.push(`⚠️ Motor peak draw (${Math.round(peakCurrent)}A) exceeds battery peak discharge (${b.peakA}A)`);
+  } else {
+    oks.push(`✓ Battery peak discharge adequate (${b.peakA}A peak available)`);
+  }
+
+  // Performance estimates
+  const effMulti = {urban:1.0,mtb:0.85,cargo:0.80,speed:0.90}[bike];
+  const rangeEst = Math.round(calcRange(b.wh,'urban') * effMulti);
+  const torqueOut = Math.round(m.torque * (m.type==='Mid-Drive'?1.0:0.85));
+  const topSpeed = Math.round((m.voltage * 0.95 * (m.type==='Mid-Drive'?0.55:0.48)) + (bike==='speed'?5:0));
+  const effScore = Math.round((m.efficiency * 0.5 + (warnings.length===0?95:75) * 0.3 + (m.sensor.includes('Torque')?90:70)*0.2));
+
+  const bikeWeights = {urban:'+8kg bike',mtb:'+12kg bike',cargo:'+20kg bike',speed:'+7kg bike'};
+
+  const r = document.getElementById('build-results');
+  r.innerHTML = `
+    <h3>Build Analysis — ${m.brand} ${m.name} · ${c.brand} ${c.name} · ${b.name}</h3>
+    ${warnings.map(w=>`<div class="warning-box">${w}</div>`).join('')}
+    ${oks.map(o=>`<div class="ok-box">${o}</div>`).join('')}
+    <div class="result-grid" style="margin-top:16px">
+      <div class="result-card">
+        <div class="result-label">Est. Top Speed</div>
+        <div class="result-num" style="color:var(--accent)">${topSpeed} km/h</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Range (${bike})</div>
+        <div class="result-num" style="color:var(--accent2)">${rangeEst} km</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Torque Output</div>
+        <div class="result-num" style="color:var(--accent3)">${torqueOut} Nm</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Efficiency Score</div>
+        <div class="result-num" style="color:${effScore>=85?'var(--good)':effScore>=70?'var(--accent3)':'var(--bad)'}">${effScore}/100</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Total Energy</div>
+        <div class="result-num" style="color:var(--purple)">${b.wh} Wh</div>
+      </div>
+      <div class="result-card">
+        <div class="result-label">Peak Power</div>
+        <div class="result-num" style="color:var(--warn)">${m.peak} W</div>
+      </div>
+    </div>
+    <p style="color:var(--text2);font-size:12px;margin-top:12px">Weight reference: ${bikeWeights[bike]} + rider + battery ${Math.round(b.wh/100)}kg est. | Controller: ${c.prog} programmability</p>
+  `;
+}
+
+function exportBuild(){
+  const mi = document.getElementById('build-motor').value;
+  const ci = document.getElementById('build-ctrl').value;
+  const bi = document.getElementById('build-batt').value;
+  const bike = document.getElementById('build-bike').value;
+  if(mi===''||ci===''||bi===''){alert('Select all components first.');return;}
+  const m=MOTORS[+mi],c=CONTROLLERS[+ci],b=BATTERIES[+bi];
+  const txt = `E-BIKE BUILD SUMMARY\n${'='.repeat(50)}\nGenerated: ${new Date().toLocaleString()}\n\nMOTOR\n  Model: ${m.brand} ${m.name}\n  Series: ${m.series}\n  Type: ${m.type}\n  Rated Power: ${m.rated}W\n  Peak Power: ${m.peak}W\n  Torque: ${m.torque} Nm\n  Voltage: ${m.voltage}V\n  Sensor: ${m.sensor}\n  Efficiency: ${m.efficiency}%\n\nCONTROLLER\n  Model: ${c.brand} ${c.name}\n  Voltage: ${c.voltage}\n  Max Current: ${c.current}A\n  Protocol: ${c.protocol}\n  Programmability: ${c.prog}\n\nBATTERY\n  Pack: ${b.name}\n  Voltage: ${b.voltage}V\n  Capacity: ${b.ah}Ah (${b.wh}Wh)\n  Cell Type: ${b.cell}\n  Cont. Discharge: ${b.contA}A\n  Peak Discharge: ${b.peakA}A\n\nBIKE TYPE: ${bike.toUpperCase()}\n\n${'='.repeat(50)}\nE-Bike Engineering Dashboard`;
+  const el = document.getElementById('build-export');
+  el.style.display='block';
+  el.textContent=txt;
+}
+
+function resetBuild(){
+  document.getElementById('build-motor').value='';
+  document.getElementById('build-ctrl').value='';
+  document.getElementById('build-batt').value='';
+  document.getElementById('build-results').innerHTML='<h3>Build Results</h3><p style="color:var(--text2);font-size:13px;margin-top:8px">Select all components above to see compatibility analysis.</p>';
+  document.getElementById('build-export').style.display='none';
+}
+
+// ==================== COMPARISON ENGINE ====================
+function renderComparisons(){
+  const driveData = [
+    {name:'Mid-Drive Motor',eff:90,torque:88,weight:65,cost:70,uphill:95,maintenance:60,regen:30,winner:true,
+     notes:'Best for hilly terrain and long distance. Gear-efficient, natural feel.'},
+    {name:'Hub Motor (Geared)',eff:83,torque:70,weight:75,cost:55,uphill:70,maintenance:80,regen:15,winner:false,
+     notes:'Lightweight, quiet, low maintenance. Good for flat to moderate terrain.'},
+    {name:'Hub Motor (Direct Drive)',eff:85,torque:82,weight:55,cost:50,uphill:75,maintenance:95,regen:70,winner:false,
+     notes:'Highest regen braking, robust, nearly zero maintenance but heavier wheel.'},
+  ];
+  document.getElementById('drive-compare').innerHTML = driveData.map(d=>`
+    <div class="compare-card ${d.winner?'winner':''}">
+      ${d.winner?'<div style="font-size:11px;color:var(--accent2);margin-bottom:8px">★ RECOMMENDED</div>':''}
+      <div style="font-weight:600;margin-bottom:4px">${d.name}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${d.notes}</div>
+      ${bar('Efficiency',d.eff,'var(--accent)')}
+      ${bar('Torque Feel',d.torque,'var(--accent2)')}
+      ${bar('Weight Score',d.weight,'var(--accent3)')}
+      ${bar('Uphill',d.uphill,'var(--purple)')}
+      ${bar('Regen Braking',d.regen,'var(--warn)')}
+      ${bar('Maintenance',d.maintenance,'var(--good)')}
+    </div>`).join('');
+
+  const hubData = [
+    {name:'Geared Hub',eff:83,torque:68,weight:80,cost:60,noise:50,regen:15,winner:false,
+     notes:'Internal planetary gears. Lighter, better low-speed torque, quiet.'},
+    {name:'Direct Drive Hub',eff:87,torque:85,weight:45,cost:50,noise:90,regen:85,winner:true,
+     notes:'No gears to wear. Best regeneration. Heavy but nearly indestructible.'},
+  ];
+  document.getElementById('hub-compare').innerHTML = hubData.map(d=>`
+    <div class="compare-card ${d.winner?'winner':''}">
+      ${d.winner?'<div style="font-size:11px;color:var(--accent2);margin-bottom:8px">★ MOST DURABLE</div>':''}
+      <div style="font-weight:600;margin-bottom:4px">${d.name}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${d.notes}</div>
+      ${bar('Efficiency',d.eff,'var(--accent)')}
+      ${bar('Torque',d.torque,'var(--accent2)')}
+      ${bar('Lightweight Score',d.weight,'var(--accent3)')}
+      ${bar('Cost Value',d.cost,'var(--purple)')}
+      ${bar('Regen Braking',d.regen,'var(--warn)')}
+      ${bar('Quiet Operation',d.noise,'var(--good)')}
+    </div>`).join('');
+
+  const setupData = [
+    {name:'High Torque Setup',example:'Bafang BBSHD + 52V 20Ah',eff:80,torque:95,range:65,topSpeed:50,comfort:70,cost:60,
+     notes:'Max torque for steep climbs and cargo. Higher power consumption.'},
+    {name:'Balanced Setup',example:'Shimano EP8 + 48V 17Ah',eff:88,torque:80,range:80,topSpeed:75,comfort:90,cost:75,
+     notes:'Best all-round. Efficient torque sensor, good range and feel.'},
+    {name:'High Efficiency Setup',example:'Bosch CX Gen5 + 36V 13Ah',eff:95,torque:65,range:95,topSpeed:60,comfort:95,cost:85,
+     notes:'Maximum range. Perfect for commuting and long-distance riding.'},
+  ];
+  document.getElementById('torque-compare').innerHTML = setupData.map(d=>`
+    <div class="compare-card">
+      <div style="font-weight:600;margin-bottom:2px">${d.name}</div>
+      <div style="font-size:11px;color:var(--accent);margin-bottom:4px">${d.example}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${d.notes}</div>
+      ${bar('Efficiency',d.eff,'var(--accent)')}
+      ${bar('Torque',d.torque,'var(--accent2)')}
+      ${bar('Range',d.range,'var(--accent3)')}
+      ${bar('Top Speed',d.topSpeed,'var(--purple)')}
+      ${bar('Ride Comfort',d.comfort,'var(--good)')}
+      ${bar('Value for Money',d.cost,'var(--warn)')}
+    </div>`).join('');
+}
+
+function bar(label, val, color){
+  return `<div class="compare-bar-wrap">
+    <div class="compare-bar-label"><span>${label}</span><span>${val}%</span></div>
+    <div class="compare-bar"><div class="compare-bar-fill" style="width:${val}%;background:${color}"></div></div>
+  </div>`;
+}
+
+// ==================== CHARTS ====================
+let charts = {};
+
+function getChartDefaults(){
+  return {
+    plugins:{legend:{labels:{color:'#8892b0',font:{size:12}}},tooltip:{backgroundColor:'#1c2030',titleColor:'#e8eaf6',bodyColor:'#8892b0',borderColor:'#2a3050',borderWidth:1}},
+    scales:{x:{ticks:{color:'#8892b0'},grid:{color:'#2a305040'}},y:{ticks:{color:'#8892b0'},grid:{color:'#2a305040'}}}
+  };
+}
+
+function initCharts(){
+  Chart.defaults.color='#8892b0';
+
+  // Chart 1: Battery capacity vs range
+  charts.range = new Chart(document.getElementById('chart-range'),{
+    type:'line',
+    data:{labels:[],datasets:[]},
+    options:{...getChartDefaults(),responsive:true,maintainAspectRatio:true}
+  });
+
+  // Chart 2: Torque curve
+  charts.torque = new Chart(document.getElementById('chart-torque'),{
+    type:'line',
+    data:{labels:[],datasets:[]},
+    options:{...getChartDefaults(),responsive:true,maintainAspectRatio:true}
+  });
+
+  // Chart 3: Efficiency comparison
+  charts.efficiency = new Chart(document.getElementById('chart-efficiency'),{
+    type:'bar',
+    data:{labels:[],datasets:[]},
+    options:{...getChartDefaults(),responsive:true,maintainAspectRatio:true,indexAxis:'y'}
+  });
+
+  // Chart 4: Voltage vs Speed
+  charts.speed = new Chart(document.getElementById('chart-speed'),{
+    type:'line',
+    data:{labels:[],datasets:[]},
+    options:{...getChartDefaults(),responsive:true,maintainAspectRatio:true}
+  });
+
+  // Chart 5: Range estimator multi-condition
+  charts.range2 = new Chart(document.getElementById('chart-range2'),{
+    type:'bar',
+    data:{labels:[],datasets:[]},
+    options:{...getChartDefaults(),responsive:true,maintainAspectRatio:true}
+  });
+
+  updateAllCharts();
+}
+
+function updateAllCharts(){
+  updateRangeChart();
+  updateTorqueChart();
+  updateEfficiencyChart();
+  updateSpeedChart();
+  updateRange2Chart();
+}
+
+function updateRangeChart(){
+  const terrain = document.getElementById('range-terrain').value;
+  const power = +document.getElementById('range-power').value;
+  const whs = [200,300,400,500,600,750,1000,1200,1500,2000];
+  const factors = {urban:1.0,offroad:0.65,mixed:0.80};
+  const f = factors[terrain];
+  const powerFactor = power<=250?1.1:power<=500?1.0:power<=750?0.9:0.8;
+
+  charts.range.data.labels = whs.map(w=>w+'Wh');
+  charts.range.data.datasets = [{
+    label:`Range (${terrain}) - ${power}W`,
+    data: whs.map(w=>Math.round(w/((power*0.08+8))*f*powerFactor*10)/10),
+    borderColor:'#4fc3f7',backgroundColor:'#4fc3f720',fill:true,tension:0.4,pointRadius:4
+  }];
+  charts.range.update();
+}
+
+function updateTorqueChart(){
+  const motor = document.getElementById('torque-motor').value;
+  const speeds = [0,5,10,15,20,25,30,35,40,45,50];
+  const curves = {
+    bbshd:{label:'Bafang BBSHD',peak:160,color:'#4fc3f7',
+      data:speeds.map(s=>s<5?160:s<15?160-s*2:s<30?130-s:Math.max(0,100-s*1.5))},
+    cx:{label:'Bosch CX Gen5',peak:85,color:'#81c784',
+      data:speeds.map(s=>s<5?85:s<20?85-s*1.5:Math.max(0,55-s*1.2))},
+    ep8:{label:'Shimano EP8',peak:85,color:'#ffb74d',
+      data:speeds.map(s=>s<5?85:s<18?85-s*1.8:Math.max(0,52-s*1.1))},
+    qs205:{label:'QS 205 2000W Hub',peak:100,color:'#f06292',
+      data:speeds.map(s=>s<10?100:s<25?100-s*1.2:Math.max(0,70-s*0.9))}
+  };
+  const c = curves[motor];
+  charts.torque.data.labels = speeds.map(s=>s+'km/h');
+  charts.torque.data.datasets=[{
+    label:c.label+' Torque (Nm)',data:c.data,
+    borderColor:c.color,backgroundColor:c.color+'20',fill:true,tension:0.4,pointRadius:3
+  }];
+  charts.torque.update();
+}
+
+function updateEfficiencyChart(){
+  const motors = [
+    {name:'Bosch CX Gen5',eff:91},{name:'Shimano EP8',eff:90},{name:'Brose Drive S',eff:90},
+    {name:'Yamaha PW-X3',eff:90},{name:'Bafang M620',eff:91},{name:'QS 273 8kW',eff:88},
+    {name:'Bafang BBSHD',eff:87},{name:'QS 205 3kW',eff:86},{name:'MXUS 3K Turbo',eff:86},
+    {name:'Crystalyte H4080',eff:84},{name:'MXUS XF40',eff:84},{name:'Bafang RMG063',eff:84},
+    {name:'Nine Cont 3007',eff:83},{name:'Bafang SWXK',eff:83},
+  ];
+  const colors = motors.map(m=>m.eff>=90?'#66bb6a':m.eff>=87?'#4fc3f7':m.eff>=84?'#ffb74d':'#ef5350');
+  charts.efficiency.data.labels = motors.map(m=>m.name);
+  charts.efficiency.data.datasets=[{
+    label:'Efficiency %',data:motors.map(m=>m.eff),
+    backgroundColor:colors,borderRadius:4
+  }];
+  charts.efficiency.options.scales.x.min = 78;
+  charts.efficiency.update();
+}
+
+function updateSpeedChart(){
+  const baseV = +document.getElementById('speed-motor').value;
+  const voltages = [baseV, baseV+4, baseV+8, baseV+12, baseV+24].filter(v=>v<=120);
+  charts.speed.data.labels = voltages.map(v=>v+'V');
+  charts.speed.data.datasets = [
+    {label:'Mid-Drive (estimated)',data:voltages.map(v=>Math.round(v*0.56+2)),borderColor:'#4fc3f7',backgroundColor:'#4fc3f720',fill:false,tension:0.3,pointRadius:5},
+    {label:'Hub Motor (estimated)',data:voltages.map(v=>Math.round(v*0.49+1)),borderColor:'#81c784',backgroundColor:'#81c78420',fill:false,tension:0.3,pointRadius:5},
+  ];
+  charts.speed.update();
+}
+
+function updateRange2Chart(){
+  const weight = +document.getElementById('graph-weight').value;
+  const packs = ['36V 10Ah\n360Wh','48V 13Ah\n624Wh','52V 17Ah\n884Wh','60V 20Ah\n1200Wh','72V 30Ah\n2160Wh'];
+  const whs = [360,624,884,1200,2160];
+  const urbanRanges = whs.map(w=>Math.round(w/(weight*0.04+5)*1.0));
+  const mixedRanges = whs.map(w=>Math.round(w/(weight*0.04+5)*0.80));
+  const offroadRanges = whs.map(w=>Math.round(w/(weight*0.04+5)*0.60));
+  charts.range2.data.labels = packs;
+  charts.range2.data.datasets=[
+    {label:'Urban',data:urbanRanges,backgroundColor:'#4fc3f7'},
+    {label:'Mixed',data:mixedRanges,backgroundColor:'#81c784'},
+    {label:'Off-Road',data:offroadRanges,backgroundColor:'#ffb74d'},
+  ];
+  charts.range2.update();
+}
+
+// ==================== TABS ====================
+function showTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(name==='graphs' && !charts.range) setTimeout(initCharts, 100);
+}
+
+// ==================== INIT ====================
+window.addEventListener('DOMContentLoaded',()=>{
+  renderMotors(MOTORS);
+  renderControllers(CONTROLLERS);
+  renderBatteries(BATTERIES);
+  populateBuildSelects();
+  renderComparisons();
+  updateRange();
+});
+</script>
+</body>
+</html>
